@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class Theatre {
-	private static AtomicInteger theater_id = new AtomicInteger(100000);
+	private static AtomicInteger theater_id = new AtomicInteger(158576);
 	
 	private Integer id;
 	private String name;

@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class Show {
-	private static AtomicInteger show_id =  new AtomicInteger(10000);
+	private static AtomicInteger show_id =  new AtomicInteger(124111);
 	
 	private Integer id;
 	private String name;

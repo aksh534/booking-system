@@ -7,6 +7,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 public class ApplicationUser implements UserDetails {
+	private static final long serialVersionUID = -2066786296751814498L;
 	
 	private final Set<? extends GrantedAuthority> grantedAuthorities;
 	private final String username;

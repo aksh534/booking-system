@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ApplicationContext;
 
 import com.demo.assignment.model.City;
 import com.demo.assignment.repository.DataRepository;
@@ -17,10 +18,16 @@ public class Application implements CommandLineRunner {
 	
 	Logger logger = LoggerFactory.getLogger(Application.class);
 	
+	private static ApplicationContext context;
+	
 	public static void main(String[] args) {
-		SpringApplication.run(Application.class, args);
+		context = SpringApplication.run(Application.class, args);
 	}
-
+	
+	public static ApplicationContext getApplicationContext() {
+		return context;
+	}
+	
 	public void run(String... args) throws Exception {
 		try {
 			List<City> cities = Generator.generateData();

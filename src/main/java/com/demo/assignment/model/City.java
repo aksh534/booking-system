@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 public class City {
-	private static AtomicInteger cityId = new AtomicInteger(1000);
+	private static AtomicInteger cityId = new AtomicInteger(125566);
 	
 	private Integer id;
 	private String name;

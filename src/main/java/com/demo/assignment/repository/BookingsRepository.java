@@ -1,108 +1,124 @@
 package com.demo.assignment.repository;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Repository;
 
+import com.demo.assignment.exception.ApiRequestException;
+import com.demo.assignment.model.ApplicationUser;
 import com.demo.assignment.model.Booking;
+import com.demo.assignment.model.Payment;
 import com.demo.assignment.model.Seat;
 import com.demo.assignment.model.Show;
+import com.demo.assignment.util.BookingStatus;
 
 @Repository
 public class BookingsRepository {
 	
-	private static Map<Integer, List<Booking>> bookings = new HashMap<>();
+	private static Map<Integer, List<Booking>> bookings = new ConcurrentHashMap<>();
+		
+	public synchronized List<Booking> getBookingsForShow(Integer showId) { 
+		return bookings.getOrDefault(showId, new ArrayList<Booking>());
+	}
 	
-	public static final int CONFIRMED = 1, IN_PROGRESS = -1; 
+	private synchronized void save(Integer showId, Booking booking) {
+		List<Booking> bookingsForShow = getBookingsForShow(showId);
+		bookingsForShow.add(booking);
+		bookings.put(showId, bookingsForShow);
+	}
 	
-	private List<Booking> getBookings(Integer showId) {
-		synchronized (bookings) {
-			return bookings.get(showId);
+	private synchronized void unblock(Integer showId, Booking booking) {
+		List<Booking> bookingsForShow = getBookingsForShow(showId);
+		bookingsForShow.remove(booking);
+		if(bookingsForShow.isEmpty()) {
+			bookings.remove(showId);
 		}
 	}
 	
-	private void saveBookings(Integer showId, List<Booking> bookingsForShow) {
-		synchronized (bookings) {
-			bookings.put(showId, bookingsForShow);
+	public synchronized Booking block(Show show, List<Seat> seats, ApplicationUser user) {
+		List<Booking> bookingsForShow = getBookingsForShow(show.getId());
+		for(Seat seat: seats) {
+			boolean isAvailable = checkSeatAvailablity(seat, bookingsForShow);
+			if(!isAvailable) {
+				return null;
+			}
+			seat.setAvailablilty(false);
+		}
+		
+		Booking booking = new Booking(show, seats, user);
+		save(show.getId(), booking);
+		return booking;
+	}
+	
+	public synchronized Payment book(Show show, Integer bookingId, ApplicationUser user) {
+		Booking booking = getBookingById(show.getId(), bookingId);
+		
+		validate(booking, show, bookingId, user);
+		
+		double amount = 0;
+		for(Seat seat: booking.getSeats()) {
+			amount += seat.getAmount();
+		}
+		
+		Payment payment = new Payment(new Date(), amount);
+		booking.setPayment(payment);
+		booking.setStatus(BookingStatus.BOOKED);
+		return payment;
+	}
+	
+	private void validate(Booking booking, Show show, Integer bookingId, ApplicationUser user) {
+		if(booking == null) {
+			throw new ApiRequestException("Invalid Request", HttpStatus.BAD_REQUEST);
+		}
+		
+		if(booking.getStatus().equals(BookingStatus.BOOKED)) {
+			throw new ApiRequestException("Invalid Request", HttpStatus.BAD_REQUEST);
+		}
+		
+		if(!user.getUsername().equals(booking.getUser().getUsername())) {
+			throw new ApiRequestException("Invalid Request", HttpStatus.BAD_REQUEST);
+		}
+		
+		long diff = new Date().getTime() - booking.getCreationTime().getTime();
+		long seconds = diff/1000;
+		long minutes = seconds/60;
+		
+		if(minutes > 10 || (minutes == 10 && seconds > 5)) {
+			unblock(show.getId(), booking);
+			throw new ApiRequestException("Invalid Request, Timeout", HttpStatus.NOT_ACCEPTABLE);
 		}
 	}
 	
-	public boolean checkSeatAvailablity(Integer showId, Integer rowNumber, Integer seatNumber) {
-		List<Booking> bookingsForShow = getBookings(showId);
-		if(bookingsForShow == null) {
-			return true;
+	private Booking getBookingById(Integer showId, Integer bookingId) {
+		List<Booking> bookingsForShow = getBookingsForShow(showId);
+		for(Booking booking: bookingsForShow) {
+			if(booking.getId().equals(bookingId)) {
+				return booking;
+			}
 		}
+		
+		return null;
+	}
+	
+	private boolean checkSeatAvailablity(Seat seat, List<Booking> bookingsForShow ) {
+		Integer rowNumber = seat.getRowNumber();
+		Integer seatNumber = seat.getSeatNumber();
 		
 		for(Booking booking: bookingsForShow) {
 			List<Seat> seats = booking.getSeats();
 			if(seats == null) continue;
-			for(Seat seat: seats) {
-				if(seat.getRowNumber().equals(rowNumber) && seat.getSeatNumber().equals(seatNumber)) {
+			for(Seat _seat: seats) {
+				if(_seat.getRowNumber().equals(rowNumber) && _seat.getSeatNumber().equals(seatNumber)) {
 					return false;
 				}
 			}
 		}
 		
 		return true;
-	}
-
-	public List<Seat> getBookedSeats(Integer showId) {
-		List<Booking> bookingsForShow = getBookings(showId);
-		if(bookingsForShow == null) {
-			return new ArrayList<Seat>();
-		}
-		
-		List<Seat> bookedSeats = new ArrayList<Seat>();
-		for(Booking booking: bookingsForShow) {
-			if(booking.getStatus() == IN_PROGRESS || booking.getSeats() == null) {
-				continue;
-			}
-			List<Seat> seats = booking.getSeats();
-			for(Seat seat: seats) {
-				bookedSeats.add(seat);
-			}
-		}
-		
-		return bookedSeats;
-	}
-
-	public void save(Show show, List<Seat> seats) {
-		for(Seat seat: seats) {
-			seat.setAvailablilty(false);
-		}
-		
-		Booking booking = new Booking(show, seats);
-		save(show.getId(), booking);
-	}
-	
-	private void save(Integer showId, Booking booking) {
-		List<Booking> bookingsForShow = getBookings(showId);
-		if(bookingsForShow == null) {
-			bookingsForShow = new ArrayList<Booking>();
-		}
-		bookingsForShow.add(booking);
-		saveBookings(showId, bookingsForShow);
-	}
-
-	public List<Seat> getInProgressSeats(Integer showId) {
-		List<Booking> bookingsForShow = getBookings(showId);
-		if(bookingsForShow == null) {
-			return new ArrayList<Seat>();
-		} 
-		
-		List<Seat> inProgressSeats = new ArrayList<Seat>();
-		for(Booking booking: bookingsForShow) {
-			if(booking.getStatus() != IN_PROGRESS || booking.getSeats() == null) {
-				continue;
-			}
-			List<Seat> seats = booking.getSeats();
-			for(Seat seat: seats) {
-				inProgressSeats.add(seat);
-			}
-		}
-		return inProgressSeats;
-	}
+	} 
 }
