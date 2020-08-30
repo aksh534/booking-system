@@ -16,13 +16,14 @@ public enum ApplicationUserRole {
 	)),
 	
 	CUSTOMER(Sets.newHashSet( ApplicationUserPermission.ALL_SEATS,
-						  ApplicationUserPermission.BOOK_SEATS
+						  	  ApplicationUserPermission.BOOK_SEATS
 	));
 	
-
+	private final String role; 
 	private final Set<ApplicationUserPermission> permissions;
 	
 	private ApplicationUserRole(Set<ApplicationUserPermission> permissions) {
+		this.role = "ROLE_" + this.name();
 		this.permissions = permissions;
 	}
 	
@@ -38,5 +39,9 @@ public enum ApplicationUserRole {
 		}
 		authorities.add(new SimpleGrantedAuthority("ROLE_" + this.name()));
 		return authorities;
+	}
+	
+	public String getRole() {
+		return this.role;
 	}
 }

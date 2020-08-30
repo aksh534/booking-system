@@ -1,7 +1,10 @@
 package com.demo.assignment.service;
 
+import java.util.Collection;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -10,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import com.demo.assignment.model.ApplicationUser;
 import com.demo.assignment.repository.ApplicationUserRepository;
+import com.demo.assignment.security.ApplicationUserRole;
 
 @Service
 public class ApplicationUserService implements UserDetailsService {
@@ -37,5 +41,15 @@ public class ApplicationUserService implements UserDetailsService {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		return authentication.getName();
 	}
-	
+
+	public boolean hasRole(ApplicationUser user, ApplicationUserRole role) {
+		Collection<? extends GrantedAuthority> authorities = user.getAuthorities();
+		for(GrantedAuthority authority: authorities) {
+			if(authority.getAuthority().equals(role.getRole())) {
+				return true;
+			}
+		}
+		
+		return false;
+	}
 }

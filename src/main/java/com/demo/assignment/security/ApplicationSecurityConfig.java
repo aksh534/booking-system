@@ -36,6 +36,7 @@ public class ApplicationSecurityConfig extends WebSecurityConfigurerAdapter {
 			.csrf().disable()
 			.authorizeRequests()
 			.antMatchers("/api/v1/filters/**").permitAll()
+			.antMatchers("/api/v1/booking/seats").permitAll()
 			.anyRequest()
 			.authenticated()
 			.and()

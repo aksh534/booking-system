@@ -30,6 +30,24 @@ public class BookingService {
 	@Autowired
 	private DataRepository dataRepository;
 	
+	public List<Seat> getSeats(Integer showId, BookingStatus status) {
+		
+		switch (status) {
+			case AVAILABLE:
+				return getAllAvailableSeats(showId);
+			case BOOKED:
+				return getBookedSeats(showId);
+			case IN_PROGRESS:
+				return getInProgressSeats(showId);
+			case UN_BOOKED:
+				return getUnbookedSeats(showId);
+			default:
+				break;
+		}
+		
+		return new ArrayList<Seat>();
+	}
+	
 	public List<Seat> getAllAvailableSeats(Integer showId) {
 		Show show = dataRepository.getShow(showId);
 		if(show == null) {

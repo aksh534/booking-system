@@ -13,11 +13,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.demo.assignment.exception.ApiRequestException;
+import com.demo.assignment.model.ApplicationUser;
 import com.demo.assignment.model.Booking;
 import com.demo.assignment.model.Payment;
 import com.demo.assignment.model.Seat;
+import com.demo.assignment.security.ApplicationUserRole;
 import com.demo.assignment.service.ApplicationUserService;
 import com.demo.assignment.service.BookingService;
+import com.demo.assignment.util.BookingStatus;
 
 @RestController
 @RequestMapping("/api/v1/booking")
@@ -30,11 +33,25 @@ public class BookingController {
 	private ApplicationUserService applicationUserService;
 	
 	@GetMapping(path = "/seats")
-	public List<Seat> getAllAvailableSeats( @RequestParam(name = "showId") Integer showId) {
+	public List<Seat> getSeats( @RequestParam(name = "showId") Integer showId, 
+								@RequestParam(name = "status", required = false) Integer statusValue) {
 		
-		List<Seat> availableSeats = null;
+		
+		BookingStatus status = BookingStatus.statusValueOf(statusValue);
+		if(status == null) {
+			throw new ApiRequestException("Invalid Request", HttpStatus.BAD_REQUEST);
+		}
+		
+		if(!status.equals(BookingStatus.AVAILABLE)) {
+			ApplicationUser user = applicationUserService.getCurrentUser();
+			if(!applicationUserService.hasRole(user, ApplicationUserRole.ADMIN)) {
+				throw new ApiRequestException("UNAUTHORIZED", HttpStatus.UNAUTHORIZED);
+			}
+		}
+		
+		List<Seat> seats = null;
 		try {
-			availableSeats = bookingService.getAllAvailableSeats(showId);
+			seats = bookingService.getSeats(showId, status);
 		}
 		catch(ApiRequestException ex) {
 			throw ex;
@@ -43,63 +60,8 @@ public class BookingController {
 			throw new ApiRequestException(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
 		}
 
-		return availableSeats;
+		return seats;
 	}
-	
-	@GetMapping(path = "/bookedSeats")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public List<Seat> getBookedSeats(@RequestParam(name = "showId") Integer showId) {
-		
-		List<Seat> bookedSeats = null;
-		try {
-			bookedSeats = bookingService.getBookedSeats(showId);
-		}
-		catch(ApiRequestException ex) {
-			throw ex;
-		}
-		catch(Exception ex) {
-			throw new ApiRequestException(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-
-		return bookedSeats;
-	}
-	
-	@GetMapping(path = "/inProgress")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public List<Seat> getInProgressSeats(@RequestParam(name = "showId") Integer showId) {
-		
-		List<Seat> inProgressSeats = null;
-		try {
-			inProgressSeats = bookingService.getInProgressSeats(showId);
-		}
-		catch(ApiRequestException ex) {
-			throw ex;
-		}
-		catch(Exception ex) {
-			throw new ApiRequestException(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-
-		return inProgressSeats;
-	}
-	
-	@GetMapping(path = "/unbookedSeats")
-	@PreAuthorize("hasRole('ROLE_ADMIN')")
-	public List<Seat> getUnbookedSeats(@RequestParam(name = "showId") Integer showId) {
-		
-		List<Seat> unbookedSeats = null;
-		try {
-			unbookedSeats = bookingService.getUnbookedSeats(showId);
-		}
-		catch(ApiRequestException ex) {
-			throw ex;
-		}
-		catch(Exception ex) {
-			throw new ApiRequestException(ex.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
-		}
-
-		return unbookedSeats;
-	}
-	
 	
 	@PostMapping(path = "/block")
 	@PreAuthorize("hasRole('ROLE_CUSTOMER')")

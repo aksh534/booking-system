@@ -21,6 +21,7 @@ import com.demo.assignment.util.BookingStatus;
 public class BookingsRepository {
 	
 	private static Map<Integer, List<Booking>> bookings = new ConcurrentHashMap<>();
+	private static final int MAX_TIME = 10;
 		
 	public synchronized List<Booking> getBookingsForShow(Integer showId) { 
 		return bookings.getOrDefault(showId, new ArrayList<Booking>());
@@ -88,7 +89,7 @@ public class BookingsRepository {
 		long seconds = diff/1000;
 		long minutes = seconds/60;
 		
-		if(minutes > 10 || (minutes == 10 && seconds > 5)) {
+		if(minutes > MAX_TIME || (minutes == MAX_TIME && seconds > 5)) {
 			unblock(show.getId(), booking);
 			throw new ApiRequestException("Invalid Request, Timeout", HttpStatus.NOT_ACCEPTABLE);
 		}
