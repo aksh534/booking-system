@@ -15,7 +15,7 @@ import com.demo.assignment.util.Generator;
 
 @SpringBootApplication
 public class Application implements CommandLineRunner {
-	
+	// comment added
 	Logger logger = LoggerFactory.getLogger(Application.class);
 	
 	private static ApplicationContext context;
